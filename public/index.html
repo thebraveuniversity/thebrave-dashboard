@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es" class="perfect-scrollbar-off">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="theme-color" content="#000000" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="icon" sizes="76x76" type="image/png" href="%PUBLIC_URL%/favicon.png" />
+    <link rel="apple-touch-icon" sizes="76x76" href="%PUBLIC_URL%/apple-icon.png" />
+    <link href="https://fonts.googleapis.com/css?family=Poppins:200,300,400,600,700,800" rel="stylesheet" />
+
+    <title>The Brave University - Panel del Oráculo</title>
+
+    <!-- 🧙 Invocación de librerías mágicas -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+    <!-- Estilos de tema medieval -->
+    <style>
+      body {
+        background-color: #000;
+        color: #fff;
+        font-family: 'Poppins', sans-serif;
+      }
+      header {
+        text-align: center;
+        background: linear-gradient(90deg, #ff4500, #b22222);
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(255, 69, 0, 0.5);
+      }
+      #logo-bravo {
+        height: 60px;
+        margin-bottom: 10px;
+      }
+      #lema {
+        font-size: 1.2rem;
+        color: #fff;
+      }
+      #tradingViewChart {
+        width: 100%;
+        height: 350px;
+        margin-top: 30px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 🏰 Fortaleza Principal -->
+    <header>
+      <img id="logo-bravo" src="%PUBLIC_URL%/brave-logo.png" alt="Escudo de The Brave University" />
+      <div id="lema">El arte de conquistar el oro moderno</div>
+    </header>
+
+    <!-- 🔮 Panel Central -->
+    <div id="root"></div>
+
+    <!-- 📊 Zona de Torres (Gráfica de Multiplicadores) -->
+    <div id="tradingViewChart"></div>
+
+    <!-- 🧪 Activación de la Magia -->
+    <script src="app.js"></script>
+  </body>
+</html>
