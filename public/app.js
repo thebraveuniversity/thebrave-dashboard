@@ -1,62 +1,72 @@
-// app.js — 📜 Script de Control de Torres en The Brave University
+// 🎯 Supabase Setup
+const supabase = window.supabase.createClient(
+  'https://ueqfpnwzmcliwjphpcjw.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlcWZwbnd6bWNsaXdqcHBjamp3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY5NjA5Njc5MiwiZXhwIjoxOTExNjcyNzkyfQ.1-EQZIlDZSL7o13kH7xSS_q7QJhuhZkMRMeobTqMWBc'
+);
 
-// 🛡️ Aquí colocas tus llaves mágicas reales de Supabase
-const SUPABASE_URL = 'https://ueqfpnwzmcliwjphpcjw.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlcWZwbnd6bWNsaXdqcGhwY2p3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzQ4MzkzMiwiZXhwIjoyMDY5MDU5OTMyfQ.x4OFwBCGx4oWiNLdDmmgqUs9mAbZ8DSgbC_JfAV_PHM';
+// 📊 Gráfico
+let chart, series;
+let lastTimestamp = 0;
 
-// 📡 Invocar al Oráculo de Datos (Supabase)
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// ⏳ Al amanecer (cuando se carga la página)
-window.onload = async () => {
-  const torre = document.getElementById('tradingViewChart');
-  const mapa = LightweightCharts.createChart(torre, {
+function setupChart() {
+  const chartContainer = document.getElementById('tradingViewChart');
+  chart = LightweightCharts.createChart(chartContainer, {
     layout: { background: { color: '#000' }, textColor: '#fff' },
-    grid: {
-      vertLines: { color: '#222' },
-      horzLines: { color: '#222' }
-    }
+    grid: { vertLines: { color: '#222' }, horzLines: { color: '#222' } },
+    timeScale: { timeVisible: true }
   });
 
-  const torresSeries = mapa.addCandlestickSeries({
-    upColor: '#FF4500', // Naranja 🔥
-    downColor: '#B22222', // Rojo 🟥
-    borderUpColor: '#FF4500',
-    borderDownColor: '#B22222',
-    wickColor: '#888'
+  series = chart.addLineSeries({
+    color: '#FFD700',
+    lineWidth: 2,
+    priceLineVisible: true
   });
+}
 
-  // 🧾 Registro de torres históricas desde Supabase
-  const { data } = await supabase.from('operaciones')
+// 🔁 Cargar datos
+async function fetchData() {
+  const { data, error } = await supabase
+    .from('operaciones')
     .select('multiplicador, timestamp')
-    .order('timestamp', { ascending: true })
-    .limit(50);
+    .gt('timestamp', new Date(lastTimestamp + 1).toISOString())
+    .order('timestamp', { ascending: true });
 
-  data.forEach(operacion => {
-    torresSeries.update({
-      time: Math.floor(new Date(operacion.timestamp).getTime() / 1000),
-      open: operacion.multiplicador,
-      high: operacion.multiplicador,
-      low: operacion.multiplicador,
-      close: operacion.multiplicador
-    });
-  });
+  if (data && data.length) {
+    const formatted = data.map(entry => ({
+      time: Math.floor(new Date(entry.timestamp).getTime() / 1000),
+      value: entry.multiplicador
+    }));
+    series.setData(formatted);
+    lastTimestamp = new Date(data[data.length - 1].timestamp).getTime();
+  }
+}
 
-  // 🌩️ Escuchar las nuevas torres que caen en la batalla (datos nuevos)
-  supabase.channel('public:operaciones')
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'operaciones'
-    }, evento => {
-      const { multiplicador, timestamp } = evento.new;
-      torresSeries.update({
-        time: Math.floor(new Date(timestamp).getTime() / 1000),
-        open: multiplicador,
-        high: multiplicador,
-        low: multiplicador,
-        close: multiplicador
-      });
-    })
-    .subscribe();
-};
+// 🕊️ Inicializar
+window.addEventListener('load', () => {
+  setupChart();
+  fetchData();
+  setInterval(fetchData, 5000);
+});
+
+// 🔌 Recibir datos desde BC.Game
+window.addEventListener('message', async event => {
+  if (event.data?.type === 'BRAVE_AVIATOR_DATA') {
+    const { multiplier, timestamp } = event.data.data;
+    await supabase.from('operaciones').insert([{
+      multiplicador: multiplier,
+      timestamp: new Date(timestamp).toISOString()
+    }]);
+    console.log('✅ Multiplicador guardado en Supabase:', multiplier);
+  }
+});
+
+// 🧪 Generador de datos de prueba (desactiva si ya conectas con BC.game)
+setInterval(() => {
+  const fakeMultiplier = parseFloat((1 + Math.random() * 20).toFixed(2));
+  const testData = {
+    multiplier: fakeMultiplier,
+    timestamp: Date.now()
+  };
+  window.postMessage({ type: 'BRAVE_AVIATOR_DATA', data: testData }, '*');
+  console.log('🎮 Datos de prueba enviados:', fakeMultiplier + 'x');
+}, 10000);
