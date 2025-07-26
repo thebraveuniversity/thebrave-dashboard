@@ -1,12 +1,11 @@
 console.log("🧠 Brave Dashboard listo para recibir datos...");
 
 window.addEventListener("load", () => {
-  if (!window.supabase) {
-    console.error("❌ La librería Supabase no está disponible en window.supabase");
-    return;
+  if (typeof supabase === "undefined" || !supabase.createClient) {
+    return console.error("❌ Supabase no está preparado en `window.supabase`");
   }
 
-  const supabaseClient = window.supabase.createClient(
+  const supabaseClient = supabase.createClient(
     "https://ueqfpnwzmcliwjphpcjw.supabase.co",
     "sb-publishable_4xZfiDfAsxnmE4o6IMOqrw_D4_ZO_Vd"
   );
@@ -16,29 +15,20 @@ window.addEventListener("load", () => {
     layout: { background: { color: "#000" }, textColor: "#fff" },
     grid: { vertLines: { color: "#222" }, horzLines: { color: "#222" } }
   });
-  const series = chart.addLineSeries({ color: "#FF4500" });
+  const series = chart.addLineSeries({ color: "#FF4500", lineWidth: 2 });
 
-  window.addEventListener("message", async event => {
-    if (event.data?.type === "BRAVE_AVIATOR_DATA") {
-      const { multiplier, timestamp } = event.data.data;
-      try {
-        const { error } = await supabaseClient.from("operaciones").insert([{
-          multiplicador: multiplier,
-          timestamp: new Date(timestamp).toISOString()
-        }]);
+  window.addEventListener("message", async ev => {
+    if (ev.data?.type === "BRAVE_AVIATOR_DATA") {
+      const { multiplier, timestamp } = ev.data.data;
+      const timeISO = new Date(timestamp).toISOString();
 
-        if (error) {
-          console.error("❌ Error Supabase:", error.message);
-        } else {
-          console.log(`✅ Multiplicador guardado: ${multiplier}x`);
-          series.update({
-            time: Math.floor(timestamp / 1000),
-            value: multiplier
-          });
-        }
-      } catch (err) {
-        console.error("❌ Error inesperado:", err.message);
+      const { error } = await supabaseClient.from("operaciones").insert([{ multiplicador: multiplier, timestamp: timeISO }]);
+      if (error) {
+        return console.error("❌ Supabase error:", error.message);
       }
+
+      console.log(`✅ Multiplicador guardado: ${multiplier}x`);
+      series.update({ time: Math.floor(timestamp / 1000), value: multiplier });
     }
   });
 });
