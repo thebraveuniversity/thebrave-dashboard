@@ -1,72 +1,72 @@
-// 🎯 Supabase Setup
-const supabase = window.supabase.createClient(
-  'https://ueqfpnwzmcliwjphpcjw.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlcWZwbnd6bWNsaXdqcHBjamp3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY5NjA5Njc5MiwiZXhwIjoxOTExNjcyNzkyfQ.1-EQZIlDZSL7o13kH7xSS_q7QJhuhZkMRMeobTqMWBc'
-);
+// app.js — Script mágico para tu dashboard The Brave University
+const SUPABASE_URL = 'https://ueqfpnwzmcliwjphpcjw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_4xZfiDfAsxnmE4o6IMOqrw_D4_ZO_Vd';
 
-// 📊 Gráfico
-let chart, series;
-let lastTimestamp = 0;
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function setupChart() {
-  const chartContainer = document.getElementById('tradingViewChart');
-  chart = LightweightCharts.createChart(chartContainer, {
+// Configuración gráfica y tema
+window.onload = async () => {
+  const torre = document.getElementById('tradingViewChart');
+  const mapa = LightweightCharts.createChart(torre, {
     layout: { background: { color: '#000' }, textColor: '#fff' },
-    grid: { vertLines: { color: '#222' }, horzLines: { color: '#222' } },
-    timeScale: { timeVisible: true }
+    grid: {
+      vertLines: { color: '#222' },
+      horzLines: { color: '#222' }
+    }
+  });
+  const series = mapa.addCandlestickSeries({
+    upColor: '#FF4500',
+    downColor: '#B22222',
+    borderUpColor: '#FF4500',
+    borderDownColor: '#B22222',
+    wickColor: '#888'
   });
 
-  series = chart.addLineSeries({
-    color: '#FFD700',
-    lineWidth: 2,
-    priceLineVisible: true
-  });
-}
+  let lastTimestamp = 0;
+  // Función para dibujar datos a color según multiplicador
+  function colorByMultiplier(m) {
+    if (m >= 10) return '#FF00FF';
+    if (m >= 2) return '#800080';
+    return '#0000FF';
+  }
+  function addPoint(m, ts) {
+    series.update({
+      time: Math.floor(ts / 1000),
+      open: m, high: m, low: m, close: m
+    });
+  }
 
-// 🔁 Cargar datos
-async function fetchData() {
-  const { data, error } = await supabase
-    .from('operaciones')
+  // 👉 Carga inicial de operaciones
+  const { data } = await supabase.from('operaciones')
     .select('multiplicador, timestamp')
-    .gt('timestamp', new Date(lastTimestamp + 1).toISOString())
-    .order('timestamp', { ascending: true });
+    .order('timestamp', { ascending: true })
+    .limit(100);
+  data.forEach(op => {
+    lastTimestamp = Math.max(lastTimestamp, new Date(op.timestamp).getTime());
+    addPoint(op.multiplicador, new Date(op.timestamp).getTime());
+  });
 
-  if (data && data.length) {
-    const formatted = data.map(entry => ({
-      time: Math.floor(new Date(entry.timestamp).getTime() / 1000),
-      value: entry.multiplicador
-    }));
-    series.setData(formatted);
-    lastTimestamp = new Date(data[data.length - 1].timestamp).getTime();
-  }
-}
+  // 🎯 Escuchar datos reales via postMessage
+  window.addEventListener('message', msg => {
+    if (msg.data?.type === 'BRAVE_AVIATOR_DATA') {
+      const { multiplier, timestamp } = msg.data.data;
+      if (timestamp > lastTimestamp) {
+        lastTimestamp = timestamp;
+        addPoint(multiplier, timestamp);
+        console.log('✅ Capturado:', multiplier + 'x');
+      }
+    }
+  });
 
-// 🕊️ Inicializar
-window.addEventListener('load', () => {
-  setupChart();
-  fetchData();
-  setInterval(fetchData, 5000);
-});
-
-// 🔌 Recibir datos desde BC.Game
-window.addEventListener('message', async event => {
-  if (event.data?.type === 'BRAVE_AVIATOR_DATA') {
-    const { multiplier, timestamp } = event.data.data;
-    await supabase.from('operaciones').insert([{
-      multiplicador: multiplier,
-      timestamp: new Date(timestamp).toISOString()
-    }]);
-    console.log('✅ Multiplicador guardado en Supabase:', multiplier);
-  }
-});
-
-// 🧪 Generador de datos de prueba (desactiva si ya conectas con BC.game)
-setInterval(() => {
-  const fakeMultiplier = parseFloat((1 + Math.random() * 20).toFixed(2));
-  const testData = {
-    multiplier: fakeMultiplier,
-    timestamp: Date.now()
-  };
-  window.postMessage({ type: 'BRAVE_AVIATOR_DATA', data: testData }, '*');
-  console.log('🎮 Datos de prueba enviados:', fakeMultiplier + 'x');
-}, 10000);
+  // 🧪 Datos de prueba si no llega nada real
+  setTimeout(() => {
+    setInterval(() => {
+      const test = {
+        multiplier: +(1 + Math.random() * 9).toFixed(2),
+        timestamp: Date.now()
+      };
+      window.postMessage({ type: 'BRAVE_AVIATOR_DATA', data: test }, '*');
+      console.log('🎮 Datos de prueba enviados:', test.multiplier + 'x');
+    }, 5000);
+  }, 10000);
+};
